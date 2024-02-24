@@ -2,7 +2,7 @@ use std::{f32::consts::PI, thread, time::Duration};
 
 use crate::drawer::Drawer;
 
-pub const VIEWPORT: usize = 70;
+pub const VIEWPORT: usize = 80;
 
 pub struct Donut {
     points: [[char; VIEWPORT]; VIEWPORT],
@@ -11,11 +11,11 @@ pub struct Donut {
 }
 
 impl Donut {
-    const THETA_SPACING: f32 = 0.07;
-    const PHI_SPACING: f32 = 0.02;
+    const THETA_SPACING: f32 = 0.04;
+    const PHI_SPACING: f32 = 0.01;
 
-    const A_SPACING: f32 = 0.02;
-    const B_SPACING: f32 = 0.07;
+    const A_SPACING: f32 = 0.07;
+    const B_SPACING: f32 = 0.02;
 
     const DONUT_THICKNESS: usize = 1;
     const DONUT_RADIUS: usize = 2;
