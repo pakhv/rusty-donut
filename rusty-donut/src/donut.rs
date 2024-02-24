@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, thread, time::Duration};
 
 use crate::drawer::Drawer;
 
@@ -13,6 +13,9 @@ pub struct Donut {
 impl Donut {
     const THETA_SPACING: f32 = 0.07;
     const PHI_SPACING: f32 = 0.02;
+
+    const A_SPACING: f32 = 0.02;
+    const B_SPACING: f32 = 0.07;
 
     const DONUT_THICKNESS: usize = 1;
     const DONUT_RADIUS: usize = 2;
@@ -34,9 +37,16 @@ impl Donut {
         let mut drawer = Drawer::new();
         //_ = drawer.prepare_screen();
 
-        self.calculate_frame();
-        _ = drawer.draw(&self.points);
-        //println!("{:?}", self.points);
+        loop {
+            increment_angle(&mut self.a_angle, Self::A_SPACING);
+            increment_angle(&mut self.b_angle, Self::B_SPACING);
+
+            self.points = [[' '; VIEWPORT]; VIEWPORT];
+            self.calculate_frame();
+            _ = drawer.draw(&self.points);
+
+            thread::sleep(Duration::from_millis(50));
+        }
 
         //_ = drawer.reset_screen();
     }
@@ -100,6 +110,17 @@ impl Donut {
                 }
                 _ => break,
             }
+        }
+    }
+}
+
+fn increment_angle(angle: &mut f32, spacing: f32) {
+    match angle {
+        angle if *angle >= 2.0 * PI => {
+            *angle -= 2.0 * PI;
+        }
+        _ => {
+            *angle += spacing;
         }
     }
 }

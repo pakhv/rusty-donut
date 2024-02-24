@@ -1,4 +1,4 @@
-use std::io::{stdout, Result, Stdout};
+use std::io::{stdout, Result, Stdout, Write};
 
 use crossterm::{
     cursor, execute, queue, style,
@@ -27,7 +27,7 @@ impl Drawer {
             }
         }
 
-        Ok(())
+        self.0.flush()
     }
 
     pub fn prepare_screen(&mut self) -> Result<()> {
