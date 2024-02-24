@@ -21,7 +21,7 @@ impl Drawer {
             for (j, _) in row.iter().enumerate() {
                 queue!(
                     self.0,
-                    cursor::MoveTo(i as u16, j as u16),
+                    cursor::MoveTo(2 * i as u16, j as u16),
                     style::Print(points[i][j])
                 )?;
             }
