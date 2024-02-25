@@ -1,25 +1,46 @@
-use std::{f32::consts::PI, thread, time::Duration};
+use std::{
+    f32::consts::PI,
+    io::Result,
+    time::{Duration, SystemTime},
+};
+
+use crossterm::event::{poll, read, Event, KeyCode, KeyEvent};
 
 use crate::drawer::Drawer;
 
 pub const VIEWPORT: usize = 80;
 
+#[derive(PartialEq, Eq)]
+enum UserInput {
+    Stop,
+    Resume,
+    Left,
+    Right,
+    Up,
+    Down,
+    Quit,
+}
+
 pub struct Donut {
+    user_input: UserInput,
+    last_render: SystemTime,
     points: [[char; VIEWPORT]; VIEWPORT],
     a_angle: f32,
     b_angle: f32,
 }
 
 impl Donut {
+    const MS_PER_RENDER: u128 = 50;
+
     const THETA_SPACING: f32 = 0.04;
     const PHI_SPACING: f32 = 0.01;
 
     const A_SPACING: f32 = 0.07;
-    const B_SPACING: f32 = 0.02;
+    const B_SPACING: f32 = 0.07;
 
     const DONUT_THICKNESS: usize = 1;
     const DONUT_RADIUS: usize = 2;
-    const DISTANCE_TO_DONUT: usize = 5;
+    const DISTANCE_TO_DONUT: usize = 15;
     const PROJECTION: usize =
         VIEWPORT * Self::DISTANCE_TO_DONUT * 3 / (8 * (Self::DONUT_THICKNESS + Self::DONUT_RADIUS));
 
@@ -27,6 +48,8 @@ impl Donut {
 
     pub fn new() -> Self {
         Self {
+            user_input: UserInput::Resume,
+            last_render: SystemTime::now(),
             points: [[' '; VIEWPORT]; VIEWPORT],
             a_angle: 0.0,
             b_angle: 0.0,
@@ -35,20 +58,33 @@ impl Donut {
 
     pub fn run(&mut self) {
         let mut drawer = Drawer::new();
-        //_ = drawer.prepare_screen();
+        drawer.prepare_screen().expect("well, that's unlucky");
 
+        match self.calculate_and_render(&mut drawer) {
+            Ok(_) => (),
+            Err(err) => println!("{err}"),
+        }
+
+        _ = drawer.reset_screen().expect("what did you do?");
+    }
+
+    fn calculate_and_render(&mut self, drawer: &mut Drawer) -> Result<()> {
         loop {
-            increment_angle(&mut self.a_angle, Self::A_SPACING);
-            increment_angle(&mut self.b_angle, Self::B_SPACING);
+            self.read_user_input()?;
+
+            if self.user_input == UserInput::Quit {
+                break Ok(());
+            }
+
+            self.increment_angle();
 
             self.points = [[' '; VIEWPORT]; VIEWPORT];
             self.calculate_frame();
-            _ = drawer.draw(&self.points);
 
-            thread::sleep(Duration::from_millis(50));
+            if self.last_render.elapsed().unwrap().as_millis() >= Self::MS_PER_RENDER {
+                drawer.draw(&self.points)?;
+            }
         }
-
-        //_ = drawer.reset_screen();
     }
 
     fn calculate_frame(&mut self) {
@@ -112,15 +148,69 @@ impl Donut {
             }
         }
     }
-}
 
-fn increment_angle(angle: &mut f32, spacing: f32) {
-    match angle {
-        angle if *angle >= 2.0 * PI => {
-            *angle -= 2.0 * PI;
+    fn read_user_input(&mut self) -> Result<()> {
+        if poll(Duration::from_millis(Self::MS_PER_RENDER as u64))? {
+            let input = match read()? {
+                Event::Key(KeyEvent {
+                    code: KeyCode::Left,
+                    ..
+                }) => UserInput::Left,
+                Event::Key(KeyEvent {
+                    code: KeyCode::Right,
+                    ..
+                }) => UserInput::Right,
+                Event::Key(KeyEvent {
+                    code: KeyCode::Up, ..
+                }) => UserInput::Up,
+                Event::Key(KeyEvent {
+                    code: KeyCode::Down,
+                    ..
+                }) => UserInput::Down,
+                Event::Key(KeyEvent {
+                    code: KeyCode::Char(ch),
+                    ..
+                }) => match ch {
+                    'q' => UserInput::Quit,
+                    ' ' => match self.user_input {
+                        UserInput::Resume => UserInput::Stop,
+                        _ => UserInput::Resume,
+                    },
+                    _ => return Ok(()),
+                },
+                _ => return Ok(()),
+            };
+
+            self.user_input = input;
+            return Ok(());
         }
-        _ => {
-            *angle += spacing;
-        }
+
+        Ok(())
+    }
+    fn increment_angle(&mut self) {
+        let (a_inc, b_inc) = match self.user_input {
+            UserInput::Stop => (0.0, 0.0),
+            UserInput::Resume => (Self::A_SPACING, Self::B_SPACING),
+            UserInput::Down => {
+                self.user_input = UserInput::Stop;
+                (-Self::A_SPACING, 0.0)
+            }
+            UserInput::Up => {
+                self.user_input = UserInput::Stop;
+                (Self::A_SPACING, 0.0)
+            }
+            UserInput::Left => {
+                self.user_input = UserInput::Stop;
+                (0.0, Self::B_SPACING)
+            }
+            UserInput::Right => {
+                self.user_input = UserInput::Stop;
+                (0.0, -Self::B_SPACING)
+            }
+            _ => return,
+        };
+
+        self.a_angle += a_inc;
+        self.b_angle += b_inc;
     }
 }
