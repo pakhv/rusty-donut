@@ -46,6 +46,8 @@ impl Donut {
 
     const LUMENANCE: [char; 12] = ['.', ',', '-', '~', ':', ';', '=', '!', '*', '#', '$', '@'];
 
+    const FULL_ANGLE_RANGE: f32 = 2.0 * PI;
+
     pub fn new() -> Self {
         Self {
             user_input: UserInput::Resume,
@@ -93,7 +95,7 @@ impl Donut {
 
         loop {
             match cur_theta {
-                theta if theta < 2.0 * PI => {
+                theta if theta < Self::FULL_ANGLE_RANGE => {
                     self.calculate_donut_points(theta, &mut z_buffer);
                     cur_theta += Self::THETA_SPACING;
                 }
@@ -111,7 +113,7 @@ impl Donut {
 
         loop {
             match cur_phi {
-                phi if phi < 2.0 * PI => {
+                phi if phi < Self::FULL_ANGLE_RANGE => {
                     let (cos_phi, sin_phi) = (f32::cos(phi), f32::sin(phi));
 
                     let circle_x =
@@ -187,6 +189,7 @@ impl Donut {
 
         Ok(())
     }
+
     fn increment_angle(&mut self) {
         let (a_inc, b_inc) = match self.user_input {
             UserInput::Stop => (0.0, 0.0),
@@ -212,5 +215,13 @@ impl Donut {
 
         self.a_angle += a_inc;
         self.b_angle += b_inc;
+
+        if self.a_angle >= Self::FULL_ANGLE_RANGE {
+            self.a_angle -= Self::FULL_ANGLE_RANGE;
+        }
+
+        if self.b_angle >= Self::FULL_ANGLE_RANGE {
+            self.b_angle -= Self::FULL_ANGLE_RANGE;
+        }
     }
 }
